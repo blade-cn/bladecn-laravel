@@ -18,3 +18,13 @@ it('should return null for unsupported url', function (string $url) {
     'https://example.com/vendor/repo',
     'https://unknown.com/vendor/repo',
 ]);
+
+it('should return all enum values as array', function () {
+    $array = SourceControl::toArray();
+
+    expect($array)->toBeArray()
+        ->toHaveCount(3)
+        ->toContain('github')
+        ->toContain('gitlab')
+        ->toContain('bitbucket');
+});
