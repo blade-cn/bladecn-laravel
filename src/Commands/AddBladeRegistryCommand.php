@@ -5,53 +5,100 @@ declare(strict_types=1);
 namespace Bladecn\Commands;
 
 use Bladecn\Actions\ExtractRemoteUrl;
-use Bladecn\Actions\ValidateRemoteRegistryData;
-use Bladecn\Enums\SourceControl;
+use Bladecn\Actions\RegistryClient;
+use Bladecn\Actions\Validations\ValidateConfigData;
+use Bladecn\Actions\Validations\ValidateRegistryUrl;
 use Bladecn\Exceptions\AlreadyExistsRemoteUrlException;
 use Bladecn\Exceptions\InvalidRemoteUrlException;
 use Bladecn\RegistryConfig;
+use Bladecn\Services\Cache;
 use Bladecn\ValueObjects\RemoteRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\Console\Attribute\AsCommand;
 
+use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\note;
+use function Laravel\Prompts\table;
 use function Laravel\Prompts\text;
 
-#[AsCommand(name: 'bladecn:add-registry', description: 'Add bladecn registry to your project.')]
 class AddBladeRegistryCommand extends Command
 {
+    protected $signature = 'bladecn:add-registry
+        {url? : The URL of the registry (Git repository).}';
+
+    protected $description = 'Add bladecn registry to your project.';
+
+    public function __construct(
+        protected ValidateRegistryUrl $validateRegistryUrl,
+        protected ValidateConfigData $validateConfigData,
+        protected Cache $cache,
+    ) {
+        parent::__construct();
+    }
+
     public function handle(): int
     {
-        $url = text(
-            label: 'Please enter your BladeCN registry URL:',
-            placeholder: 'https://github.com/vendor/repo',
-            hint: 'The URL must point to a Git repository containing the registry configuration file. Supported platforms: GitHub, GitLab, Bitbucket.',
-            required: true,
-            validate: fn (string $value) => match (true) {
-                ! filter_var($value, FILTER_VALIDATE_URL) => 'The URL is invalid.',
-                parse_url($value, PHP_URL_SCHEME) !== 'https' => 'The URL must use HTTPS scheme.',
-                ! collect(SourceControl::toArray())->contains(fn ($platform) => str_contains(parse_url($value, PHP_URL_HOST) ?? '', $platform)) => 'The URL must be from a supported source control platform (GitHub, GitLab, Bitbucket).',
-                default => null
-            }
-        );
+        RegistryConfig::flush();
 
-        $resolvedRepoUrl = app(ExtractRemoteUrl::class)(trim($url));
-        $requestUrl = sprintf('%s/%s', $resolvedRepoUrl->rawContentUrl(), RegistryConfig::JSON_REGISTRY_CONFIG_NAME);
+        /** @var ?string $url */
+        $url = $this->argument('url');
+
+        if (! is_null($url) && ($this->validateRegistryUrl)($url)->fails()) {
+            error(($this->validateRegistryUrl)($url)->errors()->first('url'));
+
+            return Command::FAILURE;
+        }
+
+        if (empty($url)) {
+            $url = text(
+                label: 'Please enter your BladeCN registry URL:',
+                placeholder: 'https://github.com/vendor/repo',
+                hint: 'The URL must point to a Git repository containing the registry configuration file. Supported platforms: GitHub, GitLab, Bitbucket.',
+                required: true,
+                validate: function (string $value) {
+                    $validator = ($this->validateRegistryUrl)($value);
+
+                    if ($validator->fails()) {
+                        return $validator->errors()->first('url');
+                    }
+
+                    return null;
+                },
+            );
+        }
 
         try {
-            $response = Http::timeout(5)
-                ->retry(3, 100)
-                ->withHeader('Accept', 'application/json')
-                ->get($requestUrl);
+            if (RegistryConfig::make()->existsRegistry($url)) {
+                throw new AlreadyExistsRemoteUrlException($url);
+            }
 
-            $data = app(ValidateRemoteRegistryData::class)($response->json())->validated();
+            $resolvedRepoUrl = app(ExtractRemoteUrl::class)(trim($url));
+            $response = RegistryClient::make($resolvedRepoUrl->rawContentUrl(), $resolvedRepoUrl->accessToken())
+                ->get(RegistryConfig::JSON_REGISTRY_CONFIG_NAME);
+
+            $data = ($this->validateConfigData)($response->json())->validated();
             $registry = RemoteRegistry::from($data);
 
-            RegistryConfig::make()->persist($registry);
+            note('Registry Information:');
+
+            table(
+                headers: ['Name', 'Registry', 'Authors', 'Description', 'Version', 'Last Updated'],
+                rows: [
+                    [$registry->name, $url, implode(', ', $registry->authors), $registry->description, $registry->version, now()->toDateTimeString()],
+                ],
+            );
+
+            confirm(
+                label: sprintf('Confirm Registry URL: %s', $url),
+                hint: 'Do you want to proceed?',
+                default: true,
+            ) || exit(self::FAILURE);
+
+            $this->cache->put($url, $registry);
+
+            RegistryConfig::make()->persist($url);
 
             note(sprintf('Registry [%s] added successfully.', $registry->name));
 
