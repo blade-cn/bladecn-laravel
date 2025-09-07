@@ -30,4 +30,13 @@ final readonly class Repo
             SourceControl::BITBUCKET => "https://bitbucket.org/{$this->owner}/{$this->repo}/raw/{$branch}",
         };
     }
+
+    public function accessToken(): ?string
+    {
+        return match ($this->source) {
+            SourceControl::GITHUB => config('bladecn.source.github.token'),
+            SourceControl::GITLAB => config('bladecn.source.gitlab.token'),
+            SourceControl::BITBUCKET => config('bladecn.source.bitbucket.token'),
+        };
+    }
 }
