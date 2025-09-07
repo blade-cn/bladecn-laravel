@@ -19,6 +19,7 @@ use Illuminate\Validation\ValidationException;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
 use function Laravel\Prompts\note;
 use function Laravel\Prompts\table;
 use function Laravel\Prompts\text;
@@ -81,7 +82,7 @@ class AddBladeRegistryCommand extends Command
             $data = ($this->validateConfigData)($response->json())->validated();
             $registry = RemoteRegistry::from($data);
 
-            note('Registry Information:');
+            note('ℹ️ Registry Information:');
 
             table(
                 headers: ['Name', 'Registry', 'Authors', 'Description', 'Version', 'Last Updated'],
@@ -100,7 +101,7 @@ class AddBladeRegistryCommand extends Command
 
             RegistryConfig::make()->persist($url);
 
-            note(sprintf('Registry [%s] added successfully.', $registry->name));
+            info(sprintf('✅ Registry [%s] added successfully.', $registry->name));
 
             return self::SUCCESS;
         } catch (RequestException $e) {
