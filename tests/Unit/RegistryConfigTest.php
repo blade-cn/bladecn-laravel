@@ -79,3 +79,13 @@ it('should flush the singleton instance', function () {
 
     expect($configA)->not->toBe($configB);
 });
+
+it('should check if the registry already exists', function () {
+    $registryConfig = RegistryConfig::make();
+
+    expect($registryConfig->existsRegistry('https://github.com/blade-cn/example-registry'))->toBeFalse();
+
+    $registryConfig->persist('https://github.com/blade-cn/example-registry');
+
+    expect($registryConfig->existsRegistry('https://github.com/blade-cn/example-registry'))->toBeTrue();
+});

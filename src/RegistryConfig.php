@@ -65,6 +65,11 @@ final class RegistryConfig
         );
     }
 
+    public function existsRegistry(string $registryUrl): bool
+    {
+        return in_array($registryUrl, $this->config->registries, true);
+    }
+
     public function persist(string $registryUrl): void
     {
         if (! self::exists()) {
