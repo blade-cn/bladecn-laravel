@@ -38,4 +38,17 @@ return [
             'token' => env('BLADECN_BITBUCKET_ACCESS_TOKEN', null),
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Registry Cache
+    |--------------------------------------------------------------------------
+    |
+    | This value controls how long (in seconds) the registry data will be cached
+    | by the application. You may adjust this value to increase or decrease the
+    | cache duration for registry lookups. A higher value reduces API calls,
+    | while a lower value ensures fresher data.
+    |
+    */
+    'cache_ttl' => env('BLADECN_CACHE_TTL', 86400), // 24 hours
 ];
