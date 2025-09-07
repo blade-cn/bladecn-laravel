@@ -35,12 +35,12 @@ final class RegistryItem
             name: $data['name'],
             type: RegistryItemType::tryFrom($data['type']) ?? RegistryItemType::COMPONENT,
             description: $data['description'] ?? '',
-            tags: filled($data['tags']) ? $data['tags'] : [],
+            tags: isset($data['tags']) && filled($data['tags']) ? $data['tags'] : [],
             version: $data['version'] ?? '1.0.0',
-            nodeDependencies: filled($data['nodeDependencies']) ? $data['nodeDependencies'] : [],
-            dependencies: filled($data['dependencies']) ? $data['dependencies'] : [],
-            files: filled($data['files']) ? $data['files'] : [],
-            cssVars: filled($data['cssVars']) ? $data['cssVars'] : '',
+            nodeDependencies: isset($data['nodeDependencies']) && filled($data['nodeDependencies']) ? $data['nodeDependencies'] : [],
+            dependencies: isset($data['dependencies']) && filled($data['dependencies']) ? $data['dependencies'] : [],
+            files: isset($data['files']) && filled($data['files']) ? $data['files'] : [],
+            cssVars: isset($data['cssVars']) && filled($data['cssVars']) ? $data['cssVars'] : [],
         );
     }
 }
