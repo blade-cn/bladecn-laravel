@@ -10,12 +10,6 @@ use Orchestra\Testbench\TestCase as Orchestra;
 
 class TestCase extends Orchestra
 {
-    /** @param Application $app */
-    public function getEnvironmentSetUp($app): void
-    {
-        config()->set('database.default', 'testing');
-    }
-
     /**
      * @param  Application  $app
      * @return array<int, class-string>
