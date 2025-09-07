@@ -41,3 +41,27 @@ it('returns the correct raw content url from given source control if the default
         return new Repo(source: SourceControl::BITBUCKET, owner: 'vendor', repo: 'repo');
     },
 ]);
+
+it('should return the access token from the config if it is set', function (Repo $repo) {
+    expect($repo->accessToken())->toBe(match ($repo->source) {
+        SourceControl::GITHUB => 'github-token',
+        SourceControl::GITLAB => 'gitlab-token',
+        SourceControl::BITBUCKET => 'bitbucket-token',
+    });
+})->with([
+    function () {
+        Config::set('bladecn.source.github.token', 'github-token');
+
+        return new Repo(source: SourceControl::GITHUB, owner: 'vendor', repo: 'repo');
+    },
+    function () {
+        Config::set('bladecn.source.gitlab.token', 'gitlab-token');
+
+        return new Repo(source: SourceControl::GITLAB, owner: 'vendor', repo: 'repo');
+    },
+    function () {
+        Config::set('bladecn.source.bitbucket.token', 'bitbucket-token');
+
+        return new Repo(source: SourceControl::BITBUCKET, owner: 'vendor', repo: 'repo');
+    },
+]);
