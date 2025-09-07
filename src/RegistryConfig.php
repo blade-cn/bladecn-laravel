@@ -6,19 +6,19 @@ namespace Bladecn;
 
 use Bladecn\Exceptions\AlreadyExistsRemoteUrlException;
 use Bladecn\Support\ProjectPath;
-use Bladecn\ValueObjects\RegistrySchema;
-use Bladecn\ValueObjects\RemoteRegistry;
+use Bladecn\ValueObjects\Config;
 
 final class RegistryConfig
 {
-    public const JSON_REGISTRY_CONFIG_NAME = 'bladecn-registry.json';
+    public const string JSON_REGISTRY_CONFIG_NAME = 'bladecn-registry.json';
 
     protected static ?self $instance = null;
 
-    /** @param array<RegistrySchema> $registries */
-    public function __construct(public array $registries = [])
+    public function __construct(public ?Config $config = null)
     {
-        //
+        if (is_null($config)) {
+            $this->config = new Config;
+        }
     }
 
     public static function make(): self
@@ -27,17 +27,14 @@ final class RegistryConfig
             return self::$instance;
         }
 
-        $contents = file_exists(self::path())
-         ? (string) file_get_contents(self::path())
-            : '{"registries":[]}';
+        if (! self::exists()) {
+            return self::$instance = new self;
+        }
 
-        $jsonAsArray = json_decode($contents, true, JSON_THROW_ON_ERROR);
+        $jsonAsArray = json_decode(file_get_contents(self::path()), true, JSON_THROW_ON_ERROR);
 
         return self::$instance = new self(
-            registries: array_map(
-                fn (array $registry) => RemoteRegistry::from($registry),
-                $jsonAsArray['registries'] ?? []
-            )
+            Config::from($jsonAsArray)
         );
     }
 
@@ -64,28 +61,25 @@ final class RegistryConfig
 
         return (bool) file_put_contents(
             self::path(),
-            json_encode([
-                'registries' => [],
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            json_encode((new Config)->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
     }
 
-    public function persist(RemoteRegistry $registry): void
+    public function persist(string $registryUrl): void
     {
         if (! self::exists()) {
             self::init();
         }
 
-        $urls = array_map(fn (RemoteRegistry $r) => $r->url, $this->registries);
-
-        if (in_array($registry->url, $urls, true)) {
-            throw new AlreadyExistsRemoteUrlException($registry->url);
+        if (in_array($registryUrl, $this->config->registries, true)) {
+            throw new AlreadyExistsRemoteUrlException($registryUrl);
         }
 
-        $this->registries[] = $registry;
+        $registries = $this->config->registries;
+        $registries[] = $registryUrl;
 
-        file_put_contents(self::path(), json_encode([
-            'registries' => array_merge($this->registries, [$registry]),
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->config = new Config($registries);
+
+        file_put_contents(self::path(), json_encode($this->config->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 }
