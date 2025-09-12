@@ -1,10 +1,11 @@
 setup:
     @echo "Setting up the development environment..."
     composer install
+    ./vendor/bin/testbench workbench:devtool --basic -n
     mkdir -p workbench/database
     touch workbench/database/database.sqlite
-    echo "DB_CONNECTION=sqlite\nDB_DATABASE=workbench/database/database.sqlite" > workbench/.env
     ./vendor/bin/testbench migrate
+    git restore composer.json
 
 recreate-db:
     @echo "Recreating the SQLite database..."
