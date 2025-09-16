@@ -14,3 +14,7 @@ recreate-db:
 check:
     @echo "Running static analysis and tests..."
     composer run check
+
+analyse:
+    @echo "Running static analysis..."
+    composer run analyse
