@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace Bladecn\Commands;
 
 use Bladecn\Actions\ExtractRemoteUrl;
-use Bladecn\Actions\RegistryClient;
-use Bladecn\Actions\Validations\ValidateConfigData;
 use Bladecn\Actions\Validations\ValidateRegistryUrl;
 use Bladecn\Exceptions\AlreadyExistsRemoteUrlException;
 use Bladecn\Exceptions\InvalidRemoteUrlException;
 use Bladecn\RegistryConfig;
+use Bladecn\RegistryManager;
 use Bladecn\Services\Cache;
-use Bladecn\ValueObjects\RemoteRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Validation\ValidationException;
@@ -33,7 +31,6 @@ class AddBladeRegistryCommand extends Command
 
     public function __construct(
         protected ValidateRegistryUrl $validateRegistryUrl,
-        protected ValidateConfigData $validateConfigData,
         protected Cache $cache,
     ) {
         parent::__construct();
@@ -75,12 +72,11 @@ class AddBladeRegistryCommand extends Command
                 throw new AlreadyExistsRemoteUrlException($url);
             }
 
-            $resolvedRepoUrl = app(ExtractRemoteUrl::class)(trim($url));
-            $response = RegistryClient::make($resolvedRepoUrl->rawContentUrl(), $resolvedRepoUrl->accessToken())
-                ->get(RegistryConfig::JSON_REGISTRY_CONFIG_NAME);
+            $resolvedRepo = app(ExtractRemoteUrl::class)(trim($url));
 
-            $data = ($this->validateConfigData)($response->json())->validated();
-            $registry = RemoteRegistry::from($data);
+            $registry = app(RegistryManager::class)
+                ->driver($resolvedRepo->source->value)
+                ->fetchRegistry($resolvedRepo);
 
             note('ℹ️ Registry Information:');
 
