@@ -87,4 +87,16 @@ final class RegistryConfig
 
         file_put_contents(self::path(), json_encode($this->config->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
+
+    public function removeRegistries(array $urls): void
+    {
+        $this->config = new Config(
+            registries: collect($this->config->registries)
+                ->reject(fn (string $registry) => in_array($registry, $urls))
+                ->values()
+                ->all()
+        );
+
+        file_put_contents(self::path(), json_encode($this->config->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
 }
