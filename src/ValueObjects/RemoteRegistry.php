@@ -14,8 +14,8 @@ final readonly class RemoteRegistry
      */
     public function __construct(
         public string $name,
-        public string $homepage,
-        public string $description,
+        public ?string $homepage,
+        public ?string $description,
         public array $authors,
         public string $version,
         public Carbon $lastUpdated,
@@ -28,9 +28,9 @@ final readonly class RemoteRegistry
     public static function from(array $data): self
     {
         return new self(
-            name: $data['name'] ?? '',
-            homepage: $data['homepage'] ?? '',
-            description: $data['description'] ?? '',
+            name: $data['name'],
+            homepage: $data['homepage'] ?? null,
+            description: $data['description'] ?? null,
             authors: $data['authors'] ?? [],
             version: $data['version'] ?? '1.0.0',
             lastUpdated: isset($data['lastUpdated']) ? Carbon::parse($data['lastUpdated']) : now(),
