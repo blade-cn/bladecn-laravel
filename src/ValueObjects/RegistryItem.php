@@ -12,7 +12,7 @@ final class RegistryItem
      * @param  array<int, string>  $tags
      * @param  array<string, string>  $nodeDependencies
      * @param  array<string, string>  $dependencies
-     * @param  array<int, string>  $files
+     * @param  array<int, array{path: string, type: string}>  $files
      * @param  array<int, string>  $cssVars
      */
     public function __construct(
